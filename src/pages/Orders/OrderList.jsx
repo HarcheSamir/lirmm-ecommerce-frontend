@@ -1,5 +1,5 @@
 import React from 'react'
-import PagesHeader from '../components/PagesHeader'
+import PagesHeader from '../../components/PagesHeader'
 
 export default function OrderList() {
   return (

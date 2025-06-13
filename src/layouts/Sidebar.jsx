@@ -29,6 +29,7 @@ const navigationItems = [
     children: [
       { name: 'Liste', path: '/dashboard/products' },
       { name: 'Créer', path: '/dashboard/products/create' },
+      { name: 'Modifier', path: '/dashboard/products/edit', hidden: true }, // For active state matching
       { name: 'Stock', path: '/dashboard/products/stock' }, // 'Stock' is commonly used in French too, or 'Inventaire'
       { name: 'Avis', path: '/dashboard/products/reviews' }, // or 'Évaluations'
 
@@ -129,6 +130,7 @@ const SidebarItem = ({
   miniSidebar
 }) => {
   const hasChildren = item.children?.length > 0;
+  const visibleChildren = item.children?.filter(c => !c.hidden) || [];
   const [showPopup, setShowPopup] = useState(false);
   const itemRef = useRef(null);
   const hidePopupTimer = useRef(null);
@@ -193,7 +195,7 @@ const SidebarItem = ({
             {item.name}
           </div>
           <div className="mt-1">
-            {item.children.map((child) => (
+            {visibleChildren.map((child) => (
               <div
                 key={child.name}
                 onClick={(e) => {
@@ -226,7 +228,7 @@ const SidebarItem = ({
             }`}
         >
           <div className="overflow-hidden pl-6 space-y-1">
-            {item.children.map((child) => (
+            {visibleChildren.map((child) => (
               <SidebarSubItem
                 key={child.name}
                 item={child}
@@ -291,9 +293,9 @@ export default function Sidebar() {
 
   return (
     <div
-      className={`font-semibold shrink-0 h-screen bg-white border-r overflow-hidden 
-        border-gray-200 flex flex-col duration-200 w-0 
-        ${miniSidebar ? 'lg:w-16' : 'lg:w-64'} 
+      className={`font-semibold shrink-0 h-screen bg-white border-r overflow-hidden
+        border-gray-200 flex flex-col duration-200 w-0
+        ${miniSidebar ? 'lg:w-16' : 'lg:w-64'}
         ${sidebar ? 'w-64 z-50' : 'w-0'}`
       }
     >
@@ -323,12 +325,10 @@ export default function Sidebar() {
           let activeSubItemName = null;
 
           if (hasChildren) {
-            isActive = (item.basePath && pathname.startsWith(item.basePath)) ||
-              item.children.some(child => child.path === pathname);
+            isActive = (item.basePath && pathname.startsWith(item.basePath));
             const activeChild = item.children.find(child => child.path === pathname);
             if (activeChild) {
               activeSubItemName = activeChild.name;
-              isActive = true;
             }
           } else {
             isActive = item.path === pathname;
