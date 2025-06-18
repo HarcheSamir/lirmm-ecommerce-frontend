@@ -73,12 +73,12 @@ const Pagination = ({ pagination, onPageChange }) => {
         }
         return pageNumbers.map((p, index) =>
             p === '...' ? (<span key={`ellipsis-${index}`} className="px-3 py-1.5 text-sm text-gray-500">...</span>)
-                : (<button key={p} onClick={() => handlePageClick(p)} className={`px-3 py-1.5 text-sm font-medium rounded-md ${page === p ? 'bg-primary text-white' : 'text-gray-600 bg-white hover:bg-gray-100'}`}>{p}</button>)
+            : (<button key={p} onClick={() => handlePageClick(p)} className={`px-3 py-1.5 text-sm font-medium rounded-md ${page === p ? 'bg-primary text-white' : 'text-gray-600 bg-white hover:bg-gray-100'}`}>{p}</button>)
         );
     };
     return (
-        <div className="flex w-full flex-wrap justify-between items-center text-sm text-gray-600">
-            <span>Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} entries</span>
+        <div className="flex items-center justify-between text-sm text-gray-600">
+             <span>Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.total)} of {pagination.total} entries</span>
             <div className="flex items-center gap-2">
                 <button onClick={() => handlePageClick(1)} disabled={page === 1} className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><FaAngleDoubleLeft /></button>
                 <button onClick={() => handlePageClick(page - 1)} disabled={page === 1} className="p-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"><FaChevronLeft /></button>
@@ -215,9 +215,9 @@ export default function ProductList() {
                         </tbody>
                     </table>
                 </div>
-                <div className="pt-4 mt-auto">
+                {/* <div className="pt-4 mt-auto"> */}
                     <Pagination pagination={pagination} onPageChange={setCurrentPage} />
-                </div>
+                {/* </div> */}
             </div>
         </div>
     );

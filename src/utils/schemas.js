@@ -92,3 +92,12 @@ export const variantSchema = z.object({
     ),
     attributes: z.record(z.any()).optional(), // Keep attributes flexible for now
 });
+
+export const roleSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: 'Role name must be at least 2 characters' }),
+  description: z
+    .string()
+    .optional(),
+});
