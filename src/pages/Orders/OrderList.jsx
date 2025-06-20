@@ -2,8 +2,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOrderStore } from '../../store/orderStore';
 import PagesHeader from '../../components/PagesHeader';
+import { Link } from 'react-router-dom'; // <-- IMPORT LINK
 import {
-    PiMagnifyingGlass, PiPencilSimpleLine, PiDotsThreeVertical, PiCaretDown, PiCaretRight, PiCheckCircle, PiXCircle, PiClock, PiSpinner, PiTruck, PiMapPin
+    PiMagnifyingGlass, PiEye, PiDotsThreeVertical, PiCaretDown, PiCaretRight, PiCheckCircle, PiXCircle, PiClock, PiSpinner, PiTruck, PiMapPin
 } from "react-icons/pi";
 import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
 
@@ -61,7 +62,7 @@ export default function OrderList() {
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                     <div className="relative w-full sm:w-auto sm:max-w-sm">
                         <PiMagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input type="search" placeholder="Search orders..." className="w-full pl-10 pr-4 py-2 border border-gray-200 bg-gray-50/80 rounded-lg focus:ring-primary focus:border-primary" />
+                        <input type="search" placeholder="Search orders..." className="w-full pl-10 pr-4 py-2 border border-gray-200bg-gray-50/80 rounded-lg focus:ring-primary focus:border-primary" />
                     </div>
                 </div>
                 <div className="flex-grow overflow-x-auto">
@@ -88,18 +89,24 @@ export default function OrderList() {
                                     <React.Fragment key={order.id}>
                                         <tr className="bg-white border-b border-gray-200/80 hover:bg-gray-50/50 align-middle">
                                             <td className="p-4"><button onClick={() => handleToggleExpand(order.id)} className="p-2 rounded-full bg-gray-100 hover:bg-primary hover:text-white transition-colors">{expandedRowId === order.id ? <PiCaretDown /> : <PiCaretRight />}</button></td>
-                                            <td className="px-6 py-4 font-medium text-primary">#{order.id.substring(0, 8).toUpperCase()}</td>
+                                            {/* --- MODIFIED: Added Link to order ID --- */}
+                                            <td className="px-6 py-4 font-medium text-primary hover:underline">
+                                                <Link to={`/dashboard/orders/${order.id}`}>
+                                                  #{order.id.substring(0, 8).toUpperCase()}
+                                                </Link>
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <div className="font-medium text-gray-800">{order.customerName}</div>
-                                                <div className="text-gray-500 text-xs">{order.guestEmail}</div>
+                                                <div className="text-gray-500 text-xs">{order.phone}</div>
                                             </td>
                                             <td className="px-6 py-4 text-gray-600">{order.items.reduce((acc, item) => acc + item.quantity, 0)}</td>
                                             <td className="px-6 py-4 font-medium text-gray-800">{formatCurrency(order.totalAmount)}</td>
                                             <td className="px-6 py-4 text-gray-600">{formatDate(order.createdAt)}</td>
                                             <td className="px-6 py-4"><StatusBadge status={order.status} /></td>
                                             <td className="px-6 py-4">
+                                                {/* --- MODIFIED: Changed icon to PiEye and added Link --- */}
                                                 <div className="flex items-center gap-2 text-gray-500">
-                                                    <button className="p-1 rounded-full hover:bg-gray-100 hover:text-primary"><PiPencilSimpleLine size={18} /></button>
+                                                    <Link to={`/dashboard/orders/${order.id}`} className="p-1 rounded-full hover:bg-gray-100 hover:text-primary"><PiEye size={18} /></Link>
                                                     <button className="p-1 rounded-full hover:bg-gray-100 hover:text-primary"><PiDotsThreeVertical size={18} /></button>
                                                 </div>
                                             </td>
@@ -139,7 +146,7 @@ export default function OrderList() {
                                                                 <div className="text-sm bg-white p-4 rounded-lg border border-gray-200 space-y-1 text-gray-600">
                                                                     <p><strong>{order.shippingAddress?.fullName}</strong></p>
                                                                     <p>{order.shippingAddress?.street}</p>
-                                                                    <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.zipCode}</p>
+                                                                    <p>{order.shippingAddress?.city}, {order.shippingAddress?.state}{order.shippingAddress?.zipCode}</p>
                                                                     <p>{order.shippingAddress?.country}</p>
                                                                 </div>
                                                             </div>
