@@ -93,7 +93,7 @@ export default function Statistics() {
     <div className="bg-white flex flex-col gap-6 p-6 min-h-screen font-sans">
       <div className='grid grid-cols-4 gap-6'>
         {/* ROW 1 (Original) */}
-        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-y-10 gap-6">
+        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2  gap-6">
           {statCardsData.map((stat, index) => (
             <Card key={index} bgColor={stat.bgColor}>
               <h3 className="text-lg font-semibold mb-2 text-gray-900">{stat.title}</h3>
@@ -164,7 +164,7 @@ export default function Statistics() {
                         return (
                         <Geography
                             key={geo.rsmKey} geography={geo}
-                            fill={d ? colorScale(d.value) : '#777777'}
+                            fill={d ? colorScale(d.value) : '#999999'}
                             stroke="#FFFFFF" strokeWidth={0.5}
                             onMouseEnter={() => {
                                 const { name } = geo.properties;
