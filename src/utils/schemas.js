@@ -93,6 +93,31 @@ export const variantSchema = z.object({
     attributes: z.record(z.any()).optional(), // Keep attributes flexible for now
 });
 
+export const setPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(1, { message: 'Password is required' })
+    .min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z
+    .string()
+    .min(1, { message: 'Confirm password is required' })
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+export const inviteUserSchema = z.object({
+  name: z
+    .string()
+    .min(2, { message: "User's name must be at least 2 characters" }),
+  email: z
+    .string()
+    .email({ message: "Please enter a valid email address" }),
+  roleId: z
+    .string()
+    .min(1, { message: "You must select a role for the user" }),
+});
+
 export const roleSchema = z.object({
   name: z
     .string()

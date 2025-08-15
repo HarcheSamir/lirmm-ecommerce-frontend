@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -14,57 +14,61 @@ import {
 } from 'react-icons/pi';
 import { FaDotCircle } from "react-icons/fa";
 import useLayoutStore from '../store/layoutStore';
+import { useAuthStore } from '../store/authStore'; // <-- IMPORT AUTH STORE
 
-// Navigation data structure
 const navigationItems = [
   {
-    name: 'Analytique', // or 'Statistiques'
+    name: 'Analytique',
     icon: PiChartBarDuotone,
-    path: '/dashboard'
+    path: '/dashboard',
+    // No permission needed for dashboard home
   },
   {
     name: 'Produits',
     icon: PiPackageDuotone,
     basePath: '/dashboard/products',
+    permission: 'read:product', // User must be able to at least read products
     children: [
-      { name: 'Liste', path: '/dashboard/products' },
-      { name: 'Créer', path: '/dashboard/products/create' },
-      { name: 'Modifier', path: '/dashboard/products/edit', hidden: true }, // For active state matching
-      { name: 'Stock', path: '/dashboard/products/stock' }, // 'Stock' is commonly used in French too, or 'Inventaire'
-      { name: 'Avis', path: '/dashboard/products/reviews' }, // or 'Évaluations'
-
+      { name: 'Liste', path: '/dashboard/products', permission: 'read:product' },
+      { name: 'Créer', path: '/dashboard/products/create', permission: 'create:product' },
+      { name: 'Modifier', path: '/dashboard/products/edit', hidden: true, permission: 'update:product' },
+      { name: 'Stock', path: '/dashboard/products/stock', permission: 'adjust:stock' },
+      { name: 'Avis', path: '/dashboard/products/reviews', permission: 'read:review' },
     ],
   },
   {
     name: 'Catégories',
     icon: PiStackDuotone,
     basePath: '/dashboard/categories',
+    permission: 'read:category',
     children: [
-      { name: 'Liste', path: '/dashboard/categories' },
-      { name: 'Créer', path: '/dashboard/categories/create' },
+      { name: 'Liste', path: '/dashboard/categories', permission: 'read:category' },
+      { name: 'Créer', path: '/dashboard/categories/create', permission: 'create:category' },
     ],
   },
   {
     name: 'Commandes',
     icon: PiShoppingCartDuotone,
     basePath: '/dashboard/orders',
+    permission: 'read:order',
     children: [
-      { name: 'Liste', path: '/dashboard/orders' },
-      { name: 'Créer', path: '/dashboard/orders/create' },
-
+      { name: 'Liste', path: '/dashboard/orders', permission: 'read:order' },
+      { name: 'Créer', path: '/dashboard/orders/create', permission: 'create:order' },
     ],
   },
   {
-    name: 'Comptes', // or 'Utilisateurs'
+    name: 'Comptes',
     icon: PiUsersDuotone,
     basePath: '/dashboard/accounts',
+    permission: 'read:user',
     children: [
-      { name: 'Rôles et Permissions', path: '/dashboard/accounts' }, // or 'Rôles & Autorisations'
-      { name: 'Créer', path: '/dashboard/accounts/create' },
+      { name: 'Rôles et Permissions', path: '/dashboard/accounts', permission: 'read:role' },
+      { name: 'Créer', path: '/dashboard/accounts/create', permission: 'write:user' },
     ],
   },
+  // These are examples, assuming they are public for all logged-in users
   {
-    name: 'Centre d\'aide', // or 'Aide'
+    name: 'Centre d\'aide',
     icon: PiQuestion,
     path: '/dashboard/help',
   },
@@ -75,7 +79,8 @@ const navigationItems = [
   },
 ];
 
-// PopupMenu component for miniSidebar mode
+// PopupMenu, SidebarSubItem, and SidebarItem components remain unchanged...
+// ... (paste the existing PopupMenu, SidebarSubItem, and SidebarItem components here) ...
 const PopupMenu = ({ children, isOpen, targetRef, onMouseEnter, onMouseLeave }) => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
@@ -104,7 +109,6 @@ const PopupMenu = ({ children, isOpen, targetRef, onMouseEnter, onMouseLeave }) 
   );
 };
 
-// SidebarSubItem component for child menu items
 const SidebarSubItem = ({ item, isActive, onClick }) => (
   <div
     onClick={onClick}
@@ -119,7 +123,6 @@ const SidebarSubItem = ({ item, isActive, onClick }) => (
   </div>
 );
 
-// SidebarItem component for main navigation items
 const SidebarItem = ({
   item,
   isActive,
@@ -159,7 +162,6 @@ const SidebarItem = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Main Item */}
       <div
         onClick={() => onClick(item.name)}
         className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${isActive
@@ -183,7 +185,6 @@ const SidebarItem = ({
         )}
       </div>
 
-      {/* Mini Sidebar Popup */}
       {miniSidebar && hasChildren && (
         <PopupMenu
           isOpen={showPopup}
@@ -221,7 +222,6 @@ const SidebarItem = ({
         </PopupMenu>
       )}
 
-      {/* Expanded Sub Items (regular sidebar mode) */}
       {hasChildren && !miniSidebar && (
         <div
           className={`grid transition-all duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
@@ -243,11 +243,13 @@ const SidebarItem = ({
   );
 };
 
-// Initialize expanded state for all menu items
-const getDefaultExpandedState = () => {
+
+const getDefaultExpandedState = (items) => {
   const initialState = {};
-  navigationItems.forEach(item => {
-    initialState[item.name] = item.children?.length > 0;
+  items.forEach(item => {
+    if (item.children?.length > 0) {
+      initialState[item.name] = true;
+    }
   });
   return initialState;
 };
@@ -257,38 +259,48 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { sidebar, miniSidebar } = useLayoutStore();
-  const [expanded, setExpanded] = useState(getDefaultExpandedState);
+  const { hasPermission } = useAuthStore(); // <-- GET THE PERMISSION CHECKER
 
-  // Toggle expansion state for items with children
+  // --- DYNAMICALLY FILTER NAVIGATION BASED ON PERMISSIONS ---
+  const filteredNavigationItems = useMemo(() => {
+    return navigationItems
+      .map(item => {
+        if (item.permission && !hasPermission(item.permission)) {
+          return null;
+        }
+        if (item.children) {
+          const filteredChildren = item.children.filter(child => hasPermission(child.permission));
+          if (filteredChildren.length === 0) {
+            // Hide parent if it has no visible children and is not a link itself
+            return item.path ? { ...item, children: [] } : null;
+          }
+          return { ...item, children: filteredChildren };
+        }
+        return item;
+      })
+      .filter(Boolean); // Removes null entries from the array
+  }, [hasPermission]);
+
+  const [expanded, setExpanded] = useState(() => getDefaultExpandedState(filteredNavigationItems));
+
   const handleToggleExpand = (itemName) => {
-    const item = navigationItems.find(i => i.name === itemName);
+    const item = filteredNavigationItems.find(i => i.name === itemName);
     if (!item?.children?.length) return;
-
-    setExpanded(prev => ({
-      ...prev,
-      [itemName]: !prev[itemName]
-    }));
+    setExpanded(prev => ({ ...prev, [itemName]: !prev[itemName] }));
   };
 
-  // Click handler for main navigation items
   const handleItemClick = (itemName) => {
-    const item = navigationItems.find(i => i.name === itemName);
+    const item = filteredNavigationItems.find(i => i.name === itemName);
     const hasChildren = item?.children?.length > 0;
-
     if (hasChildren) {
-      if (!miniSidebar) {
-        handleToggleExpand(itemName);
-      }
+      if (!miniSidebar) handleToggleExpand(itemName);
     } else if (item?.path && pathname !== item.path) {
       navigate(item.path);
     }
   };
 
-  // Click handler for sub-items
   const handleSubItemClick = (childPath) => {
-    if (childPath && pathname !== childPath) {
-      navigate(childPath);
-    }
+    if (childPath && pathname !== childPath) navigate(childPath);
   };
 
   return (
@@ -299,7 +311,6 @@ export default function Sidebar() {
         ${sidebar ? 'w-64 z-50' : 'w-0'}`
       }
     >
-      {/* Logo */}
       <div className={`p-4 pt-5 pb-3 flex items-center mb-4 ${miniSidebar ? 'justify-center' : ''}`}>
         <div className="bg-primary p-1 rounded-lg">
           <FaDotCircle className="text-white text-l" />
@@ -311,7 +322,6 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Navigation */}
       <nav
         className={`
           flex-grow ${miniSidebar ? 'ml-2' : 'pl-3'} pr-2 space-y-1 overflow-y-scroll
@@ -319,7 +329,7 @@ export default function Sidebar() {
           hover:scrollbar-thumb-gray-400 hover:scrollbar-track-transparent scrollbar-thumb-rounded-full
         `}
       >
-        {navigationItems.map((item) => {
+        {filteredNavigationItems.map((item) => { // <-- USE THE FILTERED LIST
           const hasChildren = item.children?.length > 0;
           let isActive = false;
           let activeSubItemName = null;
@@ -327,9 +337,7 @@ export default function Sidebar() {
           if (hasChildren) {
             isActive = (item.basePath && pathname.startsWith(item.basePath));
             const activeChild = item.children.find(child => child.path === pathname);
-            if (activeChild) {
-              activeSubItemName = activeChild.name;
-            }
+            if (activeChild) activeSubItemName = activeChild.name;
           } else {
             isActive = item.path === pathname;
           }

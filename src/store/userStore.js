@@ -158,4 +158,21 @@ export const useUserStore = create((set, get) => ({
       toast.error(message);
     }
   },
+
+  inviteUser: async (userData) => {
+    set({ isLoading: true, error: null });
+    try {
+        await api.post('/users/invite', userData);
+        toast.success(`Invitation successfully sent to ${userData.email}`);
+        await get().fetchUsers(); // Refresh the user list to show the pending user
+        set({ isLoading: false });
+        return true;
+    } catch (error) {
+        const message = error.response?.data?.message || 'Failed to send invitation.';
+        set({ error: message, isLoading: false });
+        toast.error(message);
+        return false;
+    }
+},
+
 }));

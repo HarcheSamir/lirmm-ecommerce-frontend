@@ -15,6 +15,7 @@
     "axios": "^1.8.4",
     "d3-scale": "^4.0.2",
     "jodit-react": "^5.2.19",
+    "jwt-decode": "^4.0.0",
     "lucide-react": "^0.523.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

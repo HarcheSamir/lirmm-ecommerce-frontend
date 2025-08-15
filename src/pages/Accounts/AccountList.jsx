@@ -1,16 +1,16 @@
 // src/pages/Accounts/AccountList.jsx
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-toastify';
 import {
-    PiArrowRight, PiUsersDuotone, PiMagnifyingGlass, PiCaretUpDown, PiPackageDuotone, PiKeyDuotone,
+    PiArrowRight, PiUsersDuotone, PiCaretUpDown, PiPackageDuotone, PiKeyDuotone,
     PiWarehouseDuotone, PiShoppingCartDuotone, PiX, PiPencilSimpleLine, PiTrash,
     PiShieldCheckDuotone
 } from 'react-icons/pi';
 import PagesHeader from '../../components/PagesHeader';
 import { useUserStore } from '../../store/userStore';
+import { useAuthStore } from '../../store/authStore'; // <-- IMPORT AUTH STORE
 import { roleSchema } from '../../utils/schemas';
 
 // Reusable Role Form Modal
@@ -119,29 +119,33 @@ const RoleFormModal = ({ isOpen, onClose, roleToEdit }) => {
 
 // Main Page Component
 export default function AccountList() {
-    const navigate = useNavigate();
+    const { hasPermission } = useAuthStore(); // <-- GET PERMISSION CHECKER
     const { users, roles, isLoading, fetchUsers, fetchRoles, updateUserRole, toggleUserStatus, deleteRole } = useUserStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
 
     useEffect(() => { fetchUsers(); fetchRoles(); }, [fetchUsers, fetchRoles]);
 
+    const canWriteRole = hasPermission('write:role');
+    const canWriteUser = hasPermission('write:user');
+    const canDeleteUser = hasPermission('delete:user');
+
     const handleOpenCreateModal = () => { setEditingRole(null); setIsModalOpen(true); };
     const handleOpenEditModal = (role) => { setEditingRole(role); setIsModalOpen(true); };
     const handleDeleteRole = async (role) => { if (window.confirm(`Are you sure you want to delete the "${role.name}" role? This action cannot be undone.`)) { await deleteRole(role.id); } };
-    const handleStatusChange = async (userId, currentStatus) => { if (window.confirm(`Are you sure you want to ${currentStatus ? 'block' : 'unblock'} this user?`)) { await toggleUserStatus(userId, !currentStatus); } };
-    
-    // --- FIX: Correctly pass user.id to the handler ---
+    const handleStatusChange = async (userId, currentStatus) => { if (window.confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this user?`)) { await toggleUserStatus(userId, !currentStatus); } };
     const handleRoleChange = async (userId, newRoleId) => { await updateUserRole(userId, newRoleId); };
 
     return (
         <div className='flex flex-col p-4 gap-8'>
-            <RoleFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} roleToEdit={editingRole} />
+            {canWriteRole && <RoleFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} roleToEdit={editingRole} />}
             <div className="flex items-center justify-between">
                 <PagesHeader className="pb-0 mt-0" title="Roles & Permissions" breadcrumbs={[{ label: 'Tableau de bord', link: '/dashboard' }, { label: 'Comptes', link: '/dashboard/accounts' },]} />
-                <button onClick={handleOpenCreateModal} className="bg-primary whitespace-nowrap text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                    Create role
-                </button>
+                {canWriteRole && (
+                    <button onClick={handleOpenCreateModal} className="bg-primary whitespace-nowrap text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        Create role
+                    </button>
+                )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {roles.map(role => (
@@ -151,7 +155,7 @@ export default function AccountList() {
                         <div className="flex items-center justify-between mt-4">
                             <div className="flex -space-x-2">
                                 {(role.users || []).slice(0, 3).map((user) => (
-                                    <img key={user.id} src={user.profileImage} alt={user.name} className="w-8 h-8 rounded-full border-2 border-gray-50" title={user.name}/>
+                                    <img key={user.id} src={user.profileImage || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt={user.name} className="w-8 h-8 rounded-full border-2 border-gray-50" title={user.name}/>
                                 ))}
                                 {(role.userCount || 0) > 3 && (
                                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600 border-2 border-gray-50">
@@ -159,12 +163,14 @@ export default function AccountList() {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => handleDeleteRole(role)} className="text-gray-400 hover:text-red-500 p-1"><PiTrash size={16}/></button>
-                                <button onClick={() => handleOpenEditModal(role)} className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
-                                    Edit role <PiArrowRight />
-                                </button>
-                            </div>
+                            {canWriteRole && (
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => handleDeleteRole(role)} className="text-gray-400 hover:text-red-500 p-1 disabled:opacity-50 disabled:cursor-not-allowed" disabled={['ADMIN', 'Customer'].includes(role.name)}><PiTrash size={16}/></button>
+                                    <button onClick={() => handleOpenEditModal(role)} className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+                                        Edit role <PiArrowRight />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -193,7 +199,7 @@ export default function AccountList() {
                                             <td className="p-4"><input type="checkbox" /></td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={user.profileImage || `https://i.pravatar.cc/40?u=${user.email}`} alt={user.name} className="w-10 h-10 rounded-full" />
+                                                    <img src={user.profileImage || `https://ui-avatars.com/api/?name=${user.name}&background=random`} alt={user.name} className="w-10 h-10 rounded-full" />
                                                     <div>
                                                         <p className="font-semibold text-gray-800">{user.name}</p>
                                                         <p className="text-gray-500">{user.email}</p>
@@ -201,9 +207,9 @@ export default function AccountList() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <button onClick={() => handleStatusChange(user.id, user.isActive)} className="cursor-pointer">
+                                                <button onClick={() => canDeleteUser && handleStatusChange(user.id, user.isActive)} className="cursor-pointer" disabled={!canDeleteUser}>
                                                     <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
-                                                        {user.isActive ? 'Active' : 'Blocked'}
+                                                        {user.isActive ? 'Active' : 'Deactivated'}
                                                     </span>
                                                 </button>
                                             </td>
@@ -214,10 +220,9 @@ export default function AccountList() {
                                             <td className="px-6 py-4">
                                                 <select
                                                     value={user.role.id}
-                                                    // --- FIX: Pass user.id and the new roleId correctly ---
                                                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                                     className="p-1.5 border border-gray-300 rounded-md text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    disabled={isLoading || user.role.name === 'ADMIN'}
+                                                    disabled={isLoading || !canWriteUser || user.role.name === 'ADMIN'}
                                                 >
                                                     {roles.map(role => (
                                                         <option key={role.id} value={role.id}>{role.name}</option>
@@ -226,8 +231,8 @@ export default function AccountList() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2 text-gray-500">
-                                                    <button className="p-2 rounded-full hover:bg-gray-100 hover:text-primary"><PiPencilSimpleLine /></button>
-                                                    <button className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500"><PiTrash /></button>
+                                                    {canWriteUser && <button className="p-2 rounded-full hover:bg-gray-100 hover:text-primary"><PiPencilSimpleLine /></button>}
+                                                    {canDeleteUser && <button className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500"><PiTrash /></button>}
                                                 </div>
                                             </td>
                                         </tr>
