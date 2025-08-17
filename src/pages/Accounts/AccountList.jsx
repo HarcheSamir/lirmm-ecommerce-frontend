@@ -209,7 +209,7 @@ export default function AccountList() {
                                             <td className="px-6 py-4">
                                                 <button onClick={() => canDeleteUser && handleStatusChange(user.id, user.isActive)} className="cursor-pointer" disabled={!canDeleteUser}>
                                                     <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
-                                                        {user.isActive ? 'Active' : 'Deactivated'}
+                                                        {user.isActive ? 'Active' : 'Pending'}
                                                     </span>
                                                 </button>
                                             </td>

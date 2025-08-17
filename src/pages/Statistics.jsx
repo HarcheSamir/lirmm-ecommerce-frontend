@@ -3,42 +3,34 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid,
 } from 'recharts';
-// --- ADDED IMPORTS FOR THE MAP ---
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { scaleLinear } from 'd3-scale';
 
-// --- DUMMY DATA (Original) --- //
+// --- DUMMY DATA --- //
 const statCardsData = [
   { title: 'Customers', value: '3,781', change: '+11.01%', bgColor: 'bg-[#E3F5FF]' },
   { title: 'Orders', value: '1,219', change: '-0.03%' },
   { title: 'Revenue', value: '$695', change: '+15.03%' },
   { title: 'Growth', value: '30.1%', change: '+6.08%', bgColor: 'bg-[#E5ECF6]' },
 ];
-
 const projectionsVsActualsData = [
   { name: 'Jan', actuals: 17, projectionGap: 3 }, { name: 'Feb', actuals: 22, projectionGap: 2 },
   { name: 'Mar', actuals: 18, projectionGap: 3 }, { name: 'Apr', actuals: 23, projectionGap: 3 },
   { name: 'May', actuals: 15, projectionGap: 3 }, { name: 'Jun', actuals: 20, projectionGap: 5 },
 ];
-
 const revenueChartData = [
   { name: 'Jan', previous: 14000000, current: 10000000 }, { name: 'Feb', previous: 12000000, current: 8000000 },
   { name: 'Mar', previous: 10000000, current: 10000000 }, { name: 'Apr', previous: 14000000, current: 18000000 },
   { name: 'May', previous: 20000000, current: 21000000 }, { name: 'Jun', previous: 19000000, current: 23000000 },
 ];
-
-// --- MODIFIED DATA FOR MAP FUNCTIONALITY (ISO_A3 codes added) ---
 const revenueByLocationData = [
   { name: 'New York', value: 72, label: '72K', ISO_A3: 'USA' },
-  { name: 'San Francisco', value: 39, label: '39K', ISO_A3: 'USA' }, // Note: Multiple cities can map to one country
+  { name: 'San Francisco', value: 39, label: '39K', ISO_A3: 'USA' },
   { name: 'Sydney', value: 25, label: '25K', ISO_A3: 'AUS' },
   { name: 'Singapore', value: 61, label: '61K', ISO_A3: 'SGP' },
 ];
-
-// --- MAP-SPECIFIC CONFIGURATION ---
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 const colorScale = scaleLinear().domain([0, 100]).range(["#EBF1F9", "#60A5FA"]);
-
 const topSellingProductsData = [
   { name: 'ASOS Ridley High Waist', price: '$79.49', quantity: 82, amount: '$6,518.18' },
   { name: 'Marco Lightweight Shirt', price: '$128.50', quantity: 37, amount: '$4,754.50' },
@@ -46,7 +38,6 @@ const topSellingProductsData = [
   { name: 'Lightweight Jacket', price: '$20.00', quantity: 184, amount: '$3,680.00' },
   { name: 'Marco Shoes', price: '$79.49', quantity: 64, amount: '$1,965.81' },
 ];
-
 const totalSalesData = [
   { name: 'Direct', value: 300.56, color: '#1F2937' },
   { name: 'Affiliate', value: 135.18, color: '#BDE9C2' },
@@ -56,22 +47,18 @@ const totalSalesData = [
 const PIE_CHART_COLORS = totalSalesData.map(item => item.color);
 const totalSalesValue = totalSalesData.reduce((sum, entry) => sum + entry.value, 0);
 
-// --- SVG ICONS (Original) --- //
+// --- SVG & HELPER COMPONENTS --- //
 const TrendIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 17L9 11L13 15L21 7" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M16 7H21V12" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-
-// --- HELPER COMPONENTS (Original) --- //
 const Card = ({ children, bgColor, className = '' }) => (
   <div className={`${bgColor || 'bg-[#F7F9FB]'} p-6 rounded-2xl flex flex-col ${className}`}>
     {children}
   </div>
 );
-
-// --- CUSTOM TOOLTIP FOR PIE CHART (Original) --- //
 const CustomPieTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const data = payload[0];
@@ -90,10 +77,10 @@ export default function Statistics() {
   const [tooltipContent, setTooltipContent] = useState('');
 
   return (
-    <div className="bg-white flex flex-col gap-6 p-6 min-h-screen font-sans">
-      <div className='grid grid-cols-4 gap-6'>
-        {/* ROW 1 (Original) */}
-        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2  gap-6">
+    <div className="bg-white flex flex-col gap-6 p-4 md:p-6 min-h-screen font-sans">
+      {/* --- ROW 1: NOW FULLY RESPONSIVE --- */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {statCardsData.map((stat, index) => (
             <Card key={index} bgColor={stat.bgColor}>
               <h3 className="text-lg font-semibold mb-2 text-gray-900">{stat.title}</h3>
@@ -107,10 +94,10 @@ export default function Statistics() {
             </Card>
           ))}
         </div>
-        <Card className="xl:col-span-2">
+        <Card>
           <h3 className="text-lg font-semibold text-gray-900">Projections vs Actuals</h3>
           <div className="flex-grow h-50 mt-4">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={210}>
               <BarChart data={projectionsVsActualsData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }} barCategoryGap="35%">
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
@@ -124,8 +111,8 @@ export default function Statistics() {
         </Card>
       </div>
 
+      {/* --- ROW 2: NOW FULLY RESPONSIVE --- */}
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* ROW 2 (Original) */}
         <Card className="xl:col-span-3">
           <h3 className="text-lg font-semibold text-gray-900">Revenue</h3>
           <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
@@ -145,16 +132,11 @@ export default function Statistics() {
           </div>
         </Card>
 
-        {/* --- THIS IS THE ONLY SECTION THAT HAS BEEN CHANGED --- */}
         <Card className="xl:col-span-1">
           <h3 className="text-lg font-semibold text-gray-900">Revenue by Location</h3>
-          {/* CHANGE 1: Gave the container a fixed height and made it a flex container to center the map */}
-          <div className="  flex items-center justify-center">
+          <div className="h-48 flex items-center justify-center -mt-4 -mb-4">
             <ComposableMap
-              projectionConfig={{
-                scale: 200,
-                center: [10, 180] 
-              }}
+              projectionConfig={{ scale: 200, center: [10, 180] }}
               onMouseLeave={() => setTooltipContent('')}
             >
                 <Geographies geography={geoUrl}>
@@ -165,7 +147,7 @@ export default function Statistics() {
                         <Geography
                             key={geo.rsmKey} geography={geo}
                             fill={d ? colorScale(d.value) : '#999999'}
-                            stroke="#FFFFFF" strokeWidth={0.5}
+                        stroke="#FFFFFF" strokeWidth={0.5}
                             onMouseEnter={() => {
                                 const { name } = geo.properties;
                                 setTooltipContent(d ? `${name} - ${d.label}` : name);
@@ -176,7 +158,7 @@ export default function Statistics() {
                 </Geographies>
             </ComposableMap>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 mt-2">
             {revenueByLocationData.map(location => (
               <div key={location.name}>
                 <div className="flex justify-between text-sm mb-1">
@@ -190,9 +172,8 @@ export default function Statistics() {
             ))}
           </div>
         </Card>
-        {/* --- END OF THE CHANGED SECTION --- */}
 
-        {/* ROW 3 (Original) */}
+        {/* --- ROW 3: ALREADY RESPONSIVE, NO CHANGES NEEDED --- */}
         <Card className="xl:col-span-3">
           <h3 className="text-lg font-semibold text-gray-900">Top Selling Products</h3>
           <div className="mt-4 overflow-x-auto">
@@ -207,7 +188,7 @@ export default function Statistics() {
               </thead>
               <tbody>
                 {topSellingProductsData.map((product, index) => (
-                  <tr key={index} className="border-b border-gray-200">
+                  <tr key={index} className="border-b border-gray-200 last:border-b-0">
                     <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{product.name}</td>
                     <td className="px-6 py-4 font-rubik">{product.price}</td>
                     <td className="px-6 py-4 font-rubik">{product.quantity}</td>
@@ -220,7 +201,7 @@ export default function Statistics() {
         </Card>
         <Card className="xl:col-span-1">
           <h3 className="text-lg font-semibold text-gray-900">Total Sales</h3>
-          <div className="flex-grow mt-4 relative">
+          <div className="flex-grow mt-4 relative h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Tooltip content={<CustomPieTooltip />} cursor={false} />

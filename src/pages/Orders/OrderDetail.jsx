@@ -29,7 +29,7 @@ const StatusTimeline = ({ currentStatus, onStatusChange, isLoading }) => {
     const currentIndex = statuses.indexOf(currentStatus);
 
     const icons = { PENDING: PiClock, SHIPPED: PiTruck, DELIVERED: PiCheckCircle, CANCELLED: PiXCircle, FAILED: PiXCircle };
-    const isCancelled = currentStatus === 'CANCELLED';
+    const isCancelledOrFailed = ['CANCELLED', 'FAILED'].includes(currentStatus);
 
     return (
         <div className="bg-white rounded-xl border border-gray-200/80 p-6">
@@ -43,30 +43,30 @@ const StatusTimeline = ({ currentStatus, onStatusChange, isLoading }) => {
                     return (
                         <div key={status} className="flex items-start">
                             <div className="flex flex-col items-center mr-4">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive && !isCancelledOrFailed ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
                                     <Icon size={20} />
                                 </div>
                                 {index < statuses.length - 1 && (
-                                    <div className={`w-0.5 h-8 mt-2 ${isActive ? 'bg-primary' : 'bg-gray-200'}`} />
+                                    <div className={`w-0.5 h-8 mt-2 ${isActive && !isCancelledOrFailed ? 'bg-primary' : 'bg-gray-200'}`} />
                                 )}
                             </div>
                             <div className="pt-2">
-                                <p className={`font-semibold ${isActive ? 'text-gray-800' : 'text-gray-500'}`}>{status.charAt(0) + status.slice(1).toLowerCase()}</p>
-                                {isCurrent && !isCancelled && <p className="text-xs text-gray-500">Current status</p>}
-                                {isDone && !isCancelled && <p className="text-xs text-gray-500">Completed</p>}
+                                <p className={`font-semibold ${isActive && !isCancelledOrFailed ? 'text-gray-800' : 'text-gray-500'}`}>{status.charAt(0) + status.slice(1).toLowerCase()}</p>
+                                {isCurrent && !isCancelledOrFailed && <p className="text-xs text-gray-500">Current status</p>}
+                                {isDone && !isCancelledOrFailed && <p className="text-xs text-gray-500">Completed</p>}
                             </div>
                         </div>
                     );
                 })}
-                {isCancelled && (
-                    <div className="flex items-start">
+                {isCancelledOrFailed && (
+                     <div className="flex items-start">
                         <div className="flex flex-col items-center mr-4">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-red-500 text-white">
                                 <PiXCircle size={20} />
                             </div>
                         </div>
                         <div className="pt-2">
-                            <p className="font-semibold text-red-600">Cancelled</p>
+                            <p className="font-semibold text-red-600">{currentStatus.charAt(0) + currentStatus.slice(1).toLowerCase()}</p>
                         </div>
                     </div>
                 )}
@@ -99,6 +99,17 @@ export default function OrderDetail() {
         return () => clearOrder();
     }, [id, fetchOrderById, clearOrder]);
 
+    // ** THE FIX: Calculate cost and revenue from authoritative backend data **
+    const { totalCost, totalRevenue, subtotal } = useMemo(() => {
+        if (!order) return { totalCost: 0, totalRevenue: 0, subtotal: 0 };
+        
+        const calculatedSubtotal = order.items.reduce((acc, item) => acc + (parseFloat(item.priceAtTimeOfOrder) * item.quantity), 0);
+        const calculatedTotalCost = order.items.reduce((acc, item) => acc + (parseFloat(item.costPriceAtTimeOfOrder || 0) * item.quantity), 0);
+        const calculatedTotalRevenue = parseFloat(order.totalAmount) - calculatedTotalCost;
+
+        return { totalCost: calculatedTotalCost, totalRevenue: calculatedTotalRevenue, subtotal: calculatedSubtotal };
+    }, [order]);
+
     if (isLoading && !order) {
         return <div className="flex h-full items-center justify-center p-10"><PiSpinnerGap className="animate-spin text-4xl text-primary" /></div>;
     }
@@ -107,10 +118,10 @@ export default function OrderDetail() {
         return <div className="p-10 text-center text-gray-600">Order not found. It might have been deleted or the ID is incorrect.</div>;
     }
     
-    const subtotal = order.items.reduce((acc, item) => acc + item.priceAtTimeOfOrder * item.quantity, 0);
-    const shippingCost = order.shippingAddress?.shippingCost || 0; // Backend doesnt provide this, hardcode
-    const tax = subtotal * 0.05; // 5% tax, hardcoded
-    const total = subtotal + shippingCost + tax;
+    // ** THE FIX: Remove hardcoded client-side calculations **
+    // const shippingCost = 0; // No longer needed
+    // const tax = 0; // No longer needed
+    // const total = order.totalAmount; // Authoritative total from backend
 
     return (
         <div className='flex flex-col p-4'>
@@ -150,22 +161,28 @@ export default function OrderDetail() {
                                                 <div>
                                                     <p className="font-semibold text-gray-800">{item.productName}</p>
                                                     <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                                                    {/* ** THE FIX: Display variant attributes ** */}
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {Object.entries(item.variantAttributes).map(([key, value]) => (
+                                                            <span key={key} className="mr-2 capitalize"><strong>{key}:</strong> {value}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-4 text-gray-600">{formatCurrency(item.priceAtTimeOfOrder)}</td>
                                         <td className="p-4 text-gray-600">{item.quantity}</td>
-                                        <td className="p-4 text-gray-800 font-medium text-right">{formatCurrency(item.priceAtTimeOfOrder * item.quantity)}</td>
+                                        <td className="p-4 text-gray-800 font-medium text-right">{formatCurrency(parseFloat(item.priceAtTimeOfOrder) * item.quantity)}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                         <div className="p-4 flex justify-end">
                             <div className="w-full max-w-xs space-y-2 text-sm">
+                                {/* ** THE FIX: Use calculated subtotal and authoritative total ** */}
                                 <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-                                <div className="flex justify-between text-gray-600"><span>Tax</span><span>{formatCurrency(tax)}</span></div>
-                                <div className="flex justify-between text-gray-600"><span>Shipping</span><span>{formatCurrency(shippingCost)}</span></div>
-                                <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t mt-2"><span>Total</span><span>{formatCurrency(total)}</span></div>
+                                <div className="flex justify-between text-gray-600"><span>Shipping & Taxes</span><span>{formatCurrency(parseFloat(order.totalAmount) - subtotal)}</span></div>
+                                <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t mt-2"><span>Total</span><span>{formatCurrency(order.totalAmount)}</span></div>
                             </div>
                         </div>
                     </div>
@@ -188,10 +205,10 @@ export default function OrderDetail() {
                         <div className="bg-white rounded-xl border border-gray-200/80 p-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Balance</h3>
                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between text-gray-600"><span>Total Order</span><span>{formatCurrency(order.totalAmount)}</span></div>
-                                <div className="flex justify-between text-gray-600"><span>Cost</span><span>{formatCurrency(subtotal * 0.7)}</span></div>
-                                <div className="flex justify-between text-green-600"><span>Revenue</span><span>{formatCurrency(order.totalAmount - (subtotal * 0.7))}</span></div>
-                                <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t mt-2"><span>Total Revenue</span><span>{formatCurrency(order.totalAmount - (subtotal * 0.7))}</span></div>
+                                {/* ** THE FIX: Use real backend data for calculations ** */}
+                                <div className="flex justify-between text-gray-600"><span>Total Sale</span><span>{formatCurrency(order.totalAmount)}</span></div>
+                                <div className="flex justify-between text-gray-600"><span>Total Cost</span><span className="text-red-600">-{formatCurrency(totalCost)}</span></div>
+                                <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t mt-2"><span>Net Revenue</span><span className="text-green-600 font-bold">{formatCurrency(totalRevenue)}</span></div>
                             </div>
                         </div>
                     </div>
@@ -212,20 +229,20 @@ export default function OrderDetail() {
                                 </div>
                             )}
                             <div>
-                                <p className="font-semibold text-gray-800">{order.customerName}</p>
-                                <p className="text-sm text-gray-500">{order.guestEmail}</p>
+                                <p className="font-semibold text-gray-800">{order.customerName || order.guestName}</p>
+                                <p className="text-sm text-gray-500">{order.userId ? order.customerEmail : order.guestEmail}</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="bg-white rounded-xl border border-gray-200/80 p-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><PiMapPin/> Shipping Address</h3>
-                        <div className="text-sm text-gray-600 space-y-1">
-                            <p className="font-medium">{order.shippingAddress?.fullName}</p>
+                        <address className="text-sm text-gray-600 space-y-1 not-italic">
+                            <p className="font-medium">{order.shippingAddress?.fullName || order.customerName || order.guestName}</p>
                             <p>{order.shippingAddress?.street}</p>
-                            <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.zipCode}</p>
+                            <p>{order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.postalCode}</p>
                             <p>{order.shippingAddress?.country}</p>
-                        </div>
+                        </address>
                     </div>
                 </div>
             </div>

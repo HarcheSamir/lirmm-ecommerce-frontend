@@ -162,7 +162,7 @@ export const useUserStore = create((set, get) => ({
   inviteUser: async (userData) => {
     set({ isLoading: true, error: null });
     try {
-        await api.post('/users/invite', userData);
+        await api.post('/auth/users/invite', userData);
         toast.success(`Invitation successfully sent to ${userData.email}`);
         await get().fetchUsers(); // Refresh the user list to show the pending user
         set({ isLoading: false });
