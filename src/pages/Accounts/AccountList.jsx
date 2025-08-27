@@ -1,4 +1,5 @@
 // src/pages/Accounts/AccountList.jsx
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,18 +7,18 @@ import { toast } from 'react-toastify';
 import {
     PiArrowRight, PiUsersDuotone, PiCaretUpDown, PiPackageDuotone, PiKeyDuotone,
     PiWarehouseDuotone, PiShoppingCartDuotone, PiX, PiPencilSimpleLine, PiTrash,
-    PiShieldCheckDuotone
+    PiShieldCheckDuotone, PiCaretUp, PiCaretDown
 } from 'react-icons/pi';
 import PagesHeader from '../../components/PagesHeader';
 import { useUserStore } from '../../store/userStore';
-import { useAuthStore } from '../../store/authStore'; // <-- IMPORT AUTH STORE
+import { useAuthStore } from '../../store/authStore';
 import { roleSchema } from '../../utils/schemas';
 
 // Reusable Role Form Modal
 const RoleFormModal = ({ isOpen, onClose, roleToEdit }) => {
     const { permissions, fetchPermissions, createRole, updateRole, isLoading } = useUserStore();
     const [selectedPermissionIds, setSelectedPermissionIds] = useState([]);
-    
+
     const isEditMode = !!roleToEdit;
     const { register, handleSubmit, formState: { errors }, reset } = useForm({ resolver: zodResolver(roleSchema) });
 
@@ -33,7 +34,7 @@ const RoleFormModal = ({ isOpen, onClose, roleToEdit }) => {
             }
         }
     }, [isOpen, isEditMode, roleToEdit, fetchPermissions, reset]);
-    
+
     const permissionGroups = useMemo(() => {
         if (!permissions || permissions.length === 0) return {};
         const iconMap = { user: PiUsersDuotone, role: PiKeyDuotone, product: PiPackageDuotone, category: PiPackageDuotone, stock: PiWarehouseDuotone, order: PiShoppingCartDuotone, 'my-orders': PiShoppingCartDuotone, default: PiShieldCheckDuotone };
@@ -119,16 +120,46 @@ const RoleFormModal = ({ isOpen, onClose, roleToEdit }) => {
 
 // Main Page Component
 export default function AccountList() {
-    const { hasPermission } = useAuthStore(); // <-- GET PERMISSION CHECKER
-    const { users, roles, isLoading, fetchUsers, fetchRoles, updateUserRole, toggleUserStatus, deleteRole } = useUserStore();
+    const { hasPermission } = useAuthStore();
+    const { users, roles, isLoading, pagination, fetchUsers, fetchRoles, updateUserRole, toggleUserStatus, deleteRole } = useUserStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRole, setEditingRole] = useState(null);
+    const [filters, setFilters] = useState({ roleId: '', isActive: '' });
+    const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
+    const [currentPage, setCurrentPage] = useState(1);
 
-    useEffect(() => { fetchUsers(); fetchRoles(); }, [fetchUsers, fetchRoles]);
+    useEffect(() => {
+        const params = { ...sort };
+        if (filters.roleId) params.roleId = filters.roleId;
+        if (filters.isActive !== '') params.isActive = filters.isActive;
+        fetchUsers(currentPage, 10, params);
+    }, [fetchUsers, currentPage, filters, sort]);
+
+    useEffect(() => {
+        fetchRoles();
+    }, [fetchRoles]);
 
     const canWriteRole = hasPermission('write:role');
     const canWriteUser = hasPermission('write:user');
     const canDeleteUser = hasPermission('delete:user');
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+        setCurrentPage(1);
+    };
+
+    const handleSort = (field) => {
+        const isAsc = sort.sortBy === field && sort.sortOrder === 'asc';
+        setSort({ sortBy: field, sortOrder: isAsc ? 'desc' : 'asc' });
+    };
+
+    const renderSortIcon = (field) => {
+        if (sort.sortBy !== field) {
+            return <PiCaretUpDown className="text-gray-400" />;
+        }
+        return sort.sortOrder === 'asc' ? <PiCaretUp className="text-primary" /> : <PiCaretDown className="text-primary" />;
+    };
 
     const handleOpenCreateModal = () => { setEditingRole(null); setIsModalOpen(true); };
     const handleOpenEditModal = (role) => { setEditingRole(role); setIsModalOpen(true); };
@@ -177,7 +208,18 @@ export default function AccountList() {
             </div>
             <div>
                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">All accounts</h2>
+                    <h2 className="text-xl font-bold text-gray-800">All accounts ({pagination.total})</h2>
+                     <div className="flex items-center gap-3">
+                        <select name="roleId" value={filters.roleId} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary">
+                             <option value="">Filter by role</option>
+                             {roles.map(role => <option key={role.id} value={role.id}>{role.name}</option>)}
+                         </select>
+                        <select name="isActive" value={filters.isActive} onChange={handleFilterChange} className="p-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary">
+                             <option value="">Filter by status</option>
+                             <option value="true">Active</option>
+                             <option value="false">Pending</option>
+                         </select>
+                     </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div className="overflow-x-auto">
@@ -185,9 +227,13 @@ export default function AccountList() {
                             <thead className="text-xs text-gray-500 uppercase bg-gray-50">
                                 <tr>
                                     <th scope="col" className="p-4 w-4"><input type="checkbox" /></th>
-                                    <th scope="col" className="px-6 py-3 flex items-center gap-1">Name <PiCaretUpDown /></th>
+                                    <th scope="col" className="px-6 py-3">
+                                        <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-gray-800">Name {renderSortIcon('name')}</button>
+                                    </th>
                                     <th scope="col" className="px-6 py-3">Status</th>
-                                    <th scope="col" className="px-6 py-3">Last online</th>
+                                    <th scope="col" className="px-6 py-3">
+                                        <button onClick={() => handleSort('createdAt')} className="flex items-center gap-1 hover:text-gray-800">Date Created {renderSortIcon('createdAt')}</button>
+                                    </th>
                                     <th scope="col" className="px-6 py-3">Role</th>
                                     <th scope="col" className="px-6 py-3">Actions</th>
                                 </tr>
@@ -207,22 +253,21 @@ export default function AccountList() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <button onClick={() => canDeleteUser && handleStatusChange(user.id, user.isActive)} className="cursor-pointer" disabled={!canDeleteUser}>
+                                                <button onClick={() => canDeleteUser && handleStatusChange(user.id, user.isActive)} className="cursor-pointer disabled:cursor-not-allowed" disabled={!canDeleteUser || (user.id === useAuthStore.getState().user?.id)}>
                                                     <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-700'}`}>
                                                         {user.isActive ? 'Active' : 'Pending'}
                                                     </span>
                                                 </button>
                                             </td>
                                             <td className="px-6 py-4 text-gray-600">
-                                                {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}<br />
-                                                <span className="text-gray-400 text-xs">{new Date(user.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                                                {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <select
                                                     value={user.role.id}
                                                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                                     className="p-1.5 border border-gray-300 rounded-md text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-primary"
-                                                    disabled={isLoading || !canWriteUser || user.role.name === 'ADMIN'}
+                                                    disabled={isLoading || !canWriteUser || user.role.name === 'ADMIN' || (user.id === useAuthStore.getState().user?.id)}
                                                 >
                                                     {roles.map(role => (
                                                         <option key={role.id} value={role.id}>{role.name}</option>
@@ -232,13 +277,20 @@ export default function AccountList() {
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-2 text-gray-500">
                                                     {canWriteUser && <button className="p-2 rounded-full hover:bg-gray-100 hover:text-primary"><PiPencilSimpleLine /></button>}
-                                                    {canDeleteUser && <button className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500"><PiTrash /></button>}
+                                                    {canDeleteUser && <button disabled={user.id === useAuthStore.getState().user?.id} onClick={() => handleStatusChange(user.id, user.isActive)} className="p-2 rounded-full hover:bg-gray-100 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><PiTrash /></button>}
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                             </tbody>
                         </table>
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600">
+                        <span>Page {pagination.page} of {pagination.totalPages}</span>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={pagination.page <= 1} className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                            <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))} disabled={pagination.page >= pagination.totalPages} className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
                     </div>
                 </div>
             </div>

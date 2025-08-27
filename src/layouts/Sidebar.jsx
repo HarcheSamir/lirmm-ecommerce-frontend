@@ -10,24 +10,24 @@ import {
   PiCaretUp,
   PiCaretDown,
   PiChartBarDuotone,
-  PiStackDuotone
+  PiStackDuotone,
+  PiArrowUDownLeftDuotone // <-- SURGICAL ADDITION: New Icon
 } from 'react-icons/pi';
 import { FaDotCircle } from "react-icons/fa";
 import useLayoutStore from '../store/layoutStore';
-import { useAuthStore } from '../store/authStore'; // <-- IMPORT AUTH STORE
+import { useAuthStore } from '../store/authStore';
 
 const navigationItems = [
   {
     name: 'Analytique',
     icon: PiChartBarDuotone,
     path: '/dashboard',
-    // No permission needed for dashboard home
   },
   {
     name: 'Produits',
     icon: PiPackageDuotone,
     basePath: '/dashboard/products',
-    permission: 'read:product', // User must be able to at least read products
+    permission: 'read:product',
     children: [
       { name: 'Liste', path: '/dashboard/products', permission: 'read:product' },
       { name: 'Créer', path: '/dashboard/products/create', permission: 'create:product' },
@@ -56,6 +56,14 @@ const navigationItems = [
       { name: 'Créer', path: '/dashboard/orders/create', permission: 'create:order' },
     ],
   },
+  // --- START: SURGICAL ADDITION ---
+  {
+    name: 'Retours',
+    icon: PiArrowUDownLeftDuotone,
+    path: '/dashboard/returns',
+    permission: 'read:returns',
+  },
+  // --- END: SURGICAL ADDITION ---
   {
     name: 'Comptes',
     icon: PiUsersDuotone,
@@ -66,7 +74,6 @@ const navigationItems = [
       { name: 'Créer', path: '/dashboard/accounts/create', permission: 'write:user' },
     ],
   },
-  // These are examples, assuming they are public for all logged-in users
   {
     name: 'Centre d\'aide',
     icon: PiQuestion,
@@ -79,8 +86,7 @@ const navigationItems = [
   },
 ];
 
-// PopupMenu, SidebarSubItem, and SidebarItem components remain unchanged...
-// ... (paste the existing PopupMenu, SidebarSubItem, and SidebarItem components here) ...
+// The rest of the file remains completely unchanged.
 const PopupMenu = ({ children, isOpen, targetRef, onMouseEnter, onMouseLeave }) => {
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
@@ -243,7 +249,6 @@ const SidebarItem = ({
   );
 };
 
-
 const getDefaultExpandedState = (items) => {
   const initialState = {};
   items.forEach(item => {
@@ -254,14 +259,12 @@ const getDefaultExpandedState = (items) => {
   return initialState;
 };
 
-// Main Sidebar Component
 export default function Sidebar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { sidebar, miniSidebar } = useLayoutStore();
-  const { hasPermission } = useAuthStore(); // <-- GET THE PERMISSION CHECKER
+  const { hasPermission } = useAuthStore();
 
-  // --- DYNAMICALLY FILTER NAVIGATION BASED ON PERMISSIONS ---
   const filteredNavigationItems = useMemo(() => {
     return navigationItems
       .map(item => {
@@ -269,16 +272,15 @@ export default function Sidebar() {
           return null;
         }
         if (item.children) {
-          const filteredChildren = item.children.filter(child => hasPermission(child.permission));
+          const filteredChildren = item.children.filter(child => !child.permission || hasPermission(child.permission));
           if (filteredChildren.length === 0) {
-            // Hide parent if it has no visible children and is not a link itself
             return item.path ? { ...item, children: [] } : null;
           }
           return { ...item, children: filteredChildren };
         }
         return item;
       })
-      .filter(Boolean); // Removes null entries from the array
+      .filter(Boolean);
   }, [hasPermission]);
 
   const [expanded, setExpanded] = useState(() => getDefaultExpandedState(filteredNavigationItems));
@@ -329,7 +331,7 @@ export default function Sidebar() {
           hover:scrollbar-thumb-gray-400 hover:scrollbar-track-transparent scrollbar-thumb-rounded-full
         `}
       >
-        {filteredNavigationItems.map((item) => { // <-- USE THE FILTERED LIST
+        {filteredNavigationItems.map((item) => {
           const hasChildren = item.children?.length > 0;
           let isActive = false;
           let activeSubItemName = null;

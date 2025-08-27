@@ -1,7 +1,6 @@
 import React from 'react'
 import { Route, Routes } from "react-router-dom";
 
-// Import the permission HOC
 import WithPermission from '../hocs/WithPermission';
 
 import NotFoundPage from '../pages/NotFoundPage';
@@ -19,12 +18,15 @@ import Stock from '../pages/Products/Stock';
 import StockHistory from '../pages/Products/StockHistory';
 import ReviewsList from '../pages/Products/ReviewsList'
 import Statistics from '../pages/Statistics'
+// --- START: SURGICAL ADDITION ---
+import ReturnList from '../pages/Returns/ReturnList';
+import ReturnDetail from '../pages/Returns/ReturnDetail';
+// --- END: SURGICAL ADDITION ---
 
 export default function DashboardNavigator() {
   return (
     <div className='h-full overflow-y-scroll '>
       <Routes>
-        {/* Public dashboard pages (all authenticated users) */}
         <Route path="/" element={<Statistics />} />
 
         {/* Product Routes */}
@@ -40,6 +42,12 @@ export default function DashboardNavigator() {
         <Route path="/orders/create" element={<WithPermission requiredPermission="create:order"><OrderCreate /></WithPermission>} />
         <Route path="/orders/:id" element={<WithPermission requiredPermission="read:order"><OrderDetail /></WithPermission>} />
 
+        {/* --- START: SURGICAL ADDITION --- */}
+        {/* Return Routes */}
+        <Route path="/returns" element={<WithPermission requiredPermission="read:returns"><ReturnList /></WithPermission>} />
+        <Route path="/returns/:id" element={<WithPermission requiredPermission="read:returns"><ReturnDetail /></WithPermission>} />
+        {/* --- END: SURGICAL ADDITION --- */}
+
         {/* Category Routes */}
         <Route path="/categories" element={<WithPermission requiredPermission="read:category"><CategoryList /></WithPermission>} />
         <Route path="/categories/create" element={<WithPermission requiredPermission="create:category"><CategoryCreate /></WithPermission>} />
@@ -48,7 +56,6 @@ export default function DashboardNavigator() {
         <Route path="/accounts" element={<WithPermission requiredPermission="read:user"><AccountList /></WithPermission>} />
         <Route path="/accounts/create" element={<WithPermission requiredPermission="write:user"><AccountCreate /></WithPermission>} />
 
-        {/* Fallback Route */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>
