@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useReturnStore } from '../../store/returnStore';
+import { useImageStore } from '../../store/imageStore'; // Import image store
+import { useAuthStore } from '../../store/authStore'; // Import auth store
 import PagesHeader from '../../components/PagesHeader';
-import { PiSpinnerGap, PiPaperPlaneRight, PiUserCircle, PiImage, PiChatText } from 'react-icons/pi';
+import { PiSpinnerGap, PiPaperPlaneRight, PiUserCircle, PiImage, PiChatText, PiX, PiPaperclip } from 'react-icons/pi';
 
 const StatusBadge = ({ status }) => {
     const config = useMemo(() => ({
@@ -20,18 +22,46 @@ const formatDate = (dateString) => new Date(dateString).toLocaleString('en-US', 
 export default function ReturnDetail() {
     const { id } = useParams();
     const { returnRequest, isLoading, fetchReturnRequestById, manageReturnRequest, createReturnRequestComment, clearReturnRequest } = useReturnStore();
+    const { user } = useAuthStore(); // Get current admin user
+    const { uploadImage, isUploading } = useImageStore();
+
     const [newComment, setNewComment] = useState('');
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (id) fetchReturnRequestById(id);
         return () => clearReturnRequest();
     }, [id, fetchReturnRequestById, clearReturnRequest]);
 
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
+
+    const removeImage = () => {
+        if (imagePreview) URL.revokeObjectURL(imagePreview);
+        setImageFile(null);
+        setImagePreview(null);
+    };
+
     const handleCommentSubmit = async (e) => {
         e.preventDefault();
-        if (!newComment.trim()) return;
-        await createReturnRequestComment(id, newComment);
+        if (!newComment.trim() && !imageFile) return;
+
+        let imageUrl = null;
+        if (imageFile) {
+            imageUrl = await uploadImage(imageFile);
+            if (!imageUrl) return; // Stop if upload fails
+        }
+        
+        await createReturnRequestComment(id, newComment, imageUrl); // No guest token needed for admin
         setNewComment('');
+        removeImage();
     };
     
     const handleStatusUpdate = async (newStatus) => {
@@ -65,7 +95,6 @@ export default function ReturnDetail() {
                         <StatusBadge status={returnRequest.status} />
                     </div>
 
-                    {/* Items to Return */}
                     <div className="bg-white rounded-xl border p-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Items to Return</h3>
                         <div className="space-y-4">
@@ -81,7 +110,6 @@ export default function ReturnDetail() {
                         </div>
                     </div>
                     
-                    {/* User Provided Images */}
                     {imageUrls && imageUrls.length > 0 && (
                         <div className="bg-white rounded-xl border p-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><PiImage/> Customer Images</h3>
@@ -95,7 +123,6 @@ export default function ReturnDetail() {
                         </div>
                     )}
 
-                    {/* Conversation Thread */}
                     <div className="bg-white rounded-xl border p-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><PiChatText /> Conversation</h3>
                         <div className="space-y-5">
@@ -106,27 +133,42 @@ export default function ReturnDetail() {
                                     <div className="mt-1 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border">{returnRequest.reason}</div>
                                 </div>
                             </div>
-                            {comments.map(comment => (
-                                <div key={comment.id} className={`flex gap-3 ${comment.authorName !== 'Guest' ? 'justify-end' : ''}`}>
-                                    {comment.authorName === 'Guest' && <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><PiUserCircle className="text-2xl text-gray-400"/></div>}
-                                    <div className={`${comment.authorName !== 'Guest' ? 'text-right' : ''}`}>
+                            {comments.map(comment => {
+                                const isAdminComment = comment.authorId === user?.id; // Correct check
+                                return (
+                                <div key={comment.id} className={`flex gap-3 ${isAdminComment ? 'justify-end' : ''}`}>
+                                    {!isAdminComment && <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><PiUserCircle className="text-2xl text-gray-400"/></div>}
+                                    <div className={`${isAdminComment ? 'text-right' : ''}`}>
                                         <p className="font-semibold text-sm text-gray-800">{comment.authorName} <span className="text-xs text-gray-400 font-normal ml-2">{formatDate(comment.createdAt)}</span></p>
-                                        <div className={`mt-1 text-sm text-white bg-primary p-3 rounded-lg border ${comment.authorName !== 'Guest' ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600'}`}>{comment.commentText}</div>
+                                        <div className={`mt-1 text-sm p-3 rounded-lg border ${isAdminComment ? 'bg-primary text-white' : 'bg-gray-50 text-gray-600'}`}>
+                                            {comment.commentText && <p>{comment.commentText}</p>}
+                                            {comment.imageUrl && (
+                                                <a href={comment.imageUrl} target="_blank" rel="noopener noreferrer">
+                                                    <img src={comment.imageUrl} alt="comment attachment" className="mt-2 rounded-md max-w-[200px]" />
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
+                            )})}
                         </div>
-                        <form onSubmit={handleCommentSubmit} className="mt-6 flex items-start gap-3">
-                            <textarea
-                                value={newComment}
-                                onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Type your response here..."
-                                className="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-primary focus:border-primary text-sm"
-                                rows="3"
-                            ></textarea>
-                            <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 h-full">
-                                <PiPaperPlaneRight size={20} />
-                            </button>
+                        <form onSubmit={handleCommentSubmit} className="mt-6 border-t pt-4">
+                            {imagePreview && <div className="relative w-24 h-24 mb-2"><img src={imagePreview} className="w-full h-full object-cover rounded"/><button type="button" onClick={removeImage} className="absolute -top-1 -right-1 bg-gray-800 text-white rounded-full p-0.5"><PiX size={10}/></button></div>}
+                             <div className="flex items-start gap-3">
+                                <textarea
+                                    value={newComment} onChange={(e) => setNewComment(e.target.value)}
+                                    placeholder="Type your response here..."
+                                    className="w-full p-3 border border-gray-300 rounded-md bg-white focus:ring-primary focus:border-primary text-sm"
+                                    rows="3"
+                                ></textarea>
+                                <div className="flex flex-col gap-2">
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                                    <button type="button" onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-500 rounded-md border hover:bg-gray-100"><PiPaperclip size={20} /></button>
+                                    <button type="submit" disabled={isLoading || isUploading} className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 flex-grow">
+                                        {isUploading ? <PiSpinnerGap className="animate-spin" size={20}/> : <PiPaperPlaneRight size={20} />}
+                                    </button>
+                                </div>
+                            </div>
                         </form>
                     </div>
                 </div>
