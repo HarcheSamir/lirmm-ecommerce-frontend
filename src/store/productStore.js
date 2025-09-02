@@ -1,4 +1,3 @@
-// src/store/productStore.js
 import { create } from 'zustand';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -70,7 +69,7 @@ export const useProductStore = create((set, get) => ({
            .filter(result => result !== null)
            .map((result, index) => ({
               imageUrl: result.url,
-              altText: `Image ${index + 1} for ${coreData.name}`,
+              altText: `Image for ${coreData.name.fr}`,
               isPrimary: index === 0,
               order: index + 1,
           }));
@@ -103,10 +102,10 @@ export const useProductStore = create((set, get) => ({
         set({ isLoading: true, error: null, product: null });
         const response = await api.get(`/products/id/${id}`);
         set({
-            product: response.data,
+            product: response.data.data,
             isLoading: false,
         });
-        return response.data;
+        return response.data.data;
     } catch (error) {
         const message = error.response?.data?.message || 'Failed to fetch product details';
         console.error("Fetch Product By ID Error:", error);
@@ -139,7 +138,7 @@ export const useProductStore = create((set, get) => ({
         });
         toast.info("Détails du produit mis à jour...");
 
-        const originalCategoryIds = originalProduct.categories.map(c => c.category.id);
+        const originalCategoryIds = originalProduct.categories.map(c => c.id);
         const newCategoryIds = categoryIds || [];
         const idsToAdd = newCategoryIds.filter(catId => !originalCategoryIds.includes(catId));
         const idsToRemove = originalCategoryIds.filter(catId => !newCategoryIds.includes(catId));
@@ -165,7 +164,7 @@ export const useProductStore = create((set, get) => ({
             const uploadResults = await Promise.all(uploadPromises);
             const uploadedImageObjects = uploadResults.filter(r => r).map((result, index) => ({
                 imageUrl: result.url,
-                altText: `Image for ${coreData.name}`,
+                altText: `Image for ${coreData.name.fr}`,
                 isPrimary: false,
                 order: originalProduct.images.length + index + 1
             }));

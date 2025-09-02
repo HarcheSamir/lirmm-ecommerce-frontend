@@ -1,12 +1,27 @@
-// src/utils/schemas.js
 import { z } from 'zod';
+
+// --- Language-specific Schemas ---
+const langStringSchema = (field = 'field') => z.string().min(1, { message: `Le ${field} est requis` });
+
+const multiLangSchema = (field = 'field') => z.object({
+  fr: langStringSchema(`${field} (FR)`),
+  en: langStringSchema(`${field} (EN)`),
+  ar: langStringSchema(`${field} (AR)`),
+});
+
+const multiLangSchemaOptional = () => z.object({
+  fr: z.string().optional(),
+  en: z.string().optional(),
+  ar: z.string().optional(),
+}).optional();
+
 
 // --- Authentication Schemas (Existing) ---
 export const loginSchema = z.object({
   email: z
     .string()
     .min(1, { message: 'Email is required' })
-    .email({ message: 'Invalid email format' }), // Added email validation
+    .email({ message: 'Invalid email format' }),
   password: z
     .string()
     .min(1, { message: 'Password is required' })
@@ -34,44 +49,31 @@ export const registerSchema = z.object({
   path: ['confirmPassword'],
 });
 
-// --- New Category Schema ---
+// --- Category Schemas ---
 export const categorySchema = z.object({
-  // Renamed from 'title' in form to 'name' for API consistency
-  name: z
-    .string()
-    .min(1, { message: 'Le nom de la catégorie est requis' }),
+  name: multiLangSchema('nom'),
   slug: z
     .string()
-    .optional() // Making slug optional as API might generate it or it can be empty
+    .optional()
     .refine(value => !value || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value), {
       message: 'Le slug ne peut contenir que des lettres minuscules, des chiffres et des traits d\'union',
     }),
-  description: z
-    .string()
-    .optional(),
-  // parentId and imageUrl are handled separately, not part of basic form validation here
+  description: multiLangSchemaOptional(),
 });
 
-// --- New Product Schema ---
-// Validates only the core product fields, not variants/images/categories which are complex objects
+// --- Product Schema ---
 export const productSchema = z.object({
-  name: z
-    .string()
-    .min(1, { message: 'Le titre du produit est requis' }),
+  name: multiLangSchema('nom du produit'),
   sku: z
     .string()
     .min(1, { message: 'Le SKU du produit est requis' })
     .refine(value => !/\s/.test(value), {
       message: 'Le SKU ne doit pas contenir d\'espaces',
     }),
-  description: z
-    .string()
-    .optional(),
-  // isActive is usually handled by a toggle/checkbox, not typically in schema unless complex logic needed
+  description: multiLangSchemaOptional(),
 });
 
 // --- Variant Schema (Optional - useful if editing variants directly later) ---
-// This isn't directly used by the main product form validation hook, but useful for reference
 export const variantSchema = z.object({
     sku: z.string().optional().refine(value => !value || !/\s/.test(value), { message: 'Le SKU ne doit pas contenir d\'espaces' }),
     price: z.preprocess(
@@ -90,7 +92,7 @@ export const variantSchema = z.object({
         (val) => (val === "" ? undefined : parseInt(String(val), 10)),
         z.number({ invalid_type_error: 'Le seuil doit être un nombre entier' }).int().nonnegative({ message: 'Le seuil ne peut pas être négatif' }).optional().nullable()
     ),
-    attributes: z.record(z.any()).optional(), // Keep attributes flexible for now
+    attributes: z.record(z.any()).optional(),
 });
 
 export const setPasswordSchema = z.object({
@@ -125,4 +127,16 @@ export const roleSchema = z.object({
   description: z
     .string()
     .optional(),
+});
+
+export const currencySchema = z.object({
+  code: z.string()
+    .min(3, { message: 'Code must be 3 characters' })
+    .max(3, { message: 'Code must be 3 characters' })
+    .regex(/^[A-Z]+$/, { message: 'Code must be uppercase letters' }),
+  rateVsBase: z.preprocess(
+    (val) => parseFloat(String(val)),
+    z.number({ required_error: 'Rate is required', invalid_type_error: 'Rate must be a number' })
+      .positive({ message: 'Rate must be a positive number' })
+  ),
 });

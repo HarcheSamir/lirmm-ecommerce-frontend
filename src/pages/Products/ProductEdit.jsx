@@ -1,5 +1,3 @@
-// src/pages/Products/ProductEdit.jsx
-
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import PagesHeader from '../../components/PagesHeader';
@@ -22,15 +20,35 @@ import { toast } from 'react-toastify';
 
 const options = ['bold', 'italic', 'underline', '|', 'ul', 'ol', '|', 'font', 'fontsize', '|', 'align', '|', 'hr', '|', 'fullsize', 'brush', '|', 'link', '|', 'undo'];
 
+const LanguageTab = ({ lang, activeLang, setActiveLang }) => (
+    <button type="button" onClick={() => setActiveLang(lang)} className={`px-4 py-2 text-sm font-medium rounded-t-md border-b-2 transition-colors duration-200 ${activeLang === lang ? 'border-primary text-primary bg-blue-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+        {lang.toUpperCase()}
+    </button>
+);
+
+
 export default function ProductEdit() {
     const navigate = useNavigate();
     const { id: productId } = useParams();
-
-    // --- Zustand Stores ---
     const { product, isLoading, isUploading, fetchProductById, updateProduct, clearProduct } = useProductStore();
     const { categories, fetchCategories, categoryIsLoading } = useCategoryStore();
 
-    const config = useMemo(() => ({ readonly: false, placeholder: 'Entrez la description du produit ici...' }), []);
+    const config = (lang) => useMemo(() => ({
+        readonly: false,
+        placeholder: `Entrez la description du produit ici... (${lang.toUpperCase()})`,
+        defaultActionOnPaste: 'insert_as_html',
+        defaultLineHeight: 1.5,
+        enter: 'div',
+        buttons: options,
+        buttonsMD: options,
+        buttonsSM: options,
+        buttonsXS: options,
+        statusbar: false,
+        toolbarAdaptive: false,
+        addNewLine: false,
+    }), [lang]);
+    
+    const [activeLang, setActiveLang] = useState('fr');
     const [activeSection, setActiveSection] = useState('sec1');
 
     const navItems = useMemo(() => [
@@ -38,33 +56,40 @@ export default function ProductEdit() {
         { label: 'Variantes', id: 'sec5' },
     ], []);
 
-    // --- Form Hook ---
     const { register, handleSubmit, formState: { errors }, control, reset, setValue } = useFormWithValidation(productSchema);
 
-    // --- Component State ---
-    const [imagePreviews, setImagePreviews] = useState([]); // { url: string, file?: File, id?: string }
+    const [imagePreviews, setImagePreviews] = useState([]);
     const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
-    const [variants, setVariants] = useState([]); // Display only for now
+    const [variants, setVariants] = useState([]);
     const fileInputRef = useRef(null);
 
-    // --- Data Fetching and Form Population ---
     useEffect(() => {
         fetchProductById(productId);
         fetchCategories(1, 500);
-        return () => clearProduct(); // Cleanup on unmount
+        return () => clearProduct();
     }, [productId, fetchProductById, fetchCategories, clearProduct]);
 
     useEffect(() => {
         if (product) {
-            // Populate form with product data
-            reset({ name: product.name, sku: product.sku, description: product.description });
+            reset({
+                sku: product.sku,
+                name: {
+                    fr: product.name?.fr || '',
+                    en: product.name?.en || '',
+                    ar: product.name?.ar || '',
+                },
+                description: {
+                    fr: product.description?.fr || '',
+                    en: product.description?.en || '',
+                    ar: product.description?.ar || '',
+                }
+            });
             setSelectedCategoryIds(product.categories.map(c => c.category.id));
             setVariants(product.variants || []);
             setImagePreviews(product.images.map(img => ({ url: img.imageUrl, id: img.id })));
         }
     }, [product, reset]);
 
-    // --- Intersection Observer for Nav ---
     useEffect(() => {
         const observerCallback = entries => entries.forEach(entry => entry.isIntersecting && setActiveSection(entry.target.id));
         const observer = new IntersectionObserver(observerCallback, { root: null, rootMargin: '0px 0px -75% 0px', threshold: 0 });
@@ -96,7 +121,6 @@ export default function ProductEdit() {
         }
     };
 
-    // --- Image Handling ---
     const handleImageSelectClick = () => fileInputRef.current?.click();
     const handleFileChange = (event) => {
         const files = Array.from(event.target.files || []);
@@ -115,7 +139,6 @@ export default function ProductEdit() {
       return () => imagePreviews.forEach(p => p.file && URL.revokeObjectURL(p.url));
     }, [imagePreviews]);
 
-    // --- Category Handling ---
     const handleCategoryToggle = (category) => {
         setSelectedCategoryIds(prev => prev.includes(category.id) ? prev.filter(id => id !== category.id) : [...prev, category.id]);
     };
@@ -136,33 +159,41 @@ export default function ProductEdit() {
         {navItems.map(item => (<div key={item.id} className='flex flex-col items-center flex-shrink-0'><HashLink smooth to={`#${item.id}`} className={`px-3 py-2 rounded-md transition-colors duration-200 font-semibold whitespace-nowrap ${activeSection === item.id ? 'text-fblack' : 'text-gray-500 hover:text-fblack'}`}> {item.label} </HashLink><div className={`h-[2px] w-full mt-1 transition-colors duration-200 ${activeSection === item.id ? 'bg-fblack' : 'bg-transparent'}`} /></div>))}
       </nav>
       <form onSubmit={handleSubmit(onSubmit)} className='flex flex-col px-4 '>
-        {/* SECTION 1: Résumé */}
         <section id="sec1" className='flex flex-col lg:flex-row gap-4 lg:gap-8 '>
           <div className='w-full lg:w-[30%] lg:shrink-0 flex flex-col mb-4 lg:mb-0'>
             <p className='font-medium text-fblack text-[16px]'>Résumé</p> <p className='text-sm font mt-1 text-gray-500'>Modifiez le titre, le SKU et la description.</p>
           </div>
           <div className='w-full flex flex-col gap-6'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nom Produit*</label>
-                <input type="text" id="name" {...register("name")} className={`w-full px-3 rounded-[3px] py-2 border ${errors.name ? 'border-red-500' : 'border-gray-300'} focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`} placeholder="Nom du produit" />
-                {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
-              </div>
-              <div>
+              <div className="md:col-span-2">
                 <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">SKU (Base)*</label>
                 <input type="text" id="sku" {...register("sku")} className={`w-full px-3 rounded-[3px] py-2 border ${errors.sku ? 'border-red-500' : 'border-gray-300'} focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`} placeholder="SKU unique" />
                 {errors.sku && <p className="mt-1 text-xs text-red-600">{errors.sku.message}</p>}
               </div>
             </div>
-            <div tabIndex={0}>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <Controller name="description" control={control} render={({ field }) => ( <JoditEditor value={field.value || ''} config={config} onBlur={newContent => field.onChange(newContent)} /> )} />
-              {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
+            <div className="border border-gray-200 rounded-md">
+                <div className="flex border-b border-gray-200 bg-gray-50/50">
+                    {['fr', 'en', 'ar'].map(lang => <LanguageTab key={lang} lang={lang} activeLang={activeLang} setActiveLang={setActiveLang} />)}
+                </div>
+                <div className="p-4">
+                    {['fr', 'en', 'ar'].map(lang => (
+                        <div key={lang} style={{ display: activeLang === lang ? 'block' : 'none' }}>
+                            <div className='mb-4'>
+                                <label htmlFor={`name.${lang}`} className="block text-sm font-medium text-gray-700 mb-1">Nom Produit ({lang.toUpperCase()})*</label>
+                                <input type="text" id={`name.${lang}`} {...register(`name.${lang}`)} className={`w-full px-3 rounded-[3px] py-2 border ${errors.name?.[lang] ? 'border-red-500' : 'border-gray-300'} focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`} placeholder={`Nom du produit en ${lang}`} />
+                                {errors.name?.[lang] && <p className="mt-1 text-xs text-red-600">{errors.name[lang].message}</p>}
+                            </div>
+                            <div tabIndex={0}>
+                                <label htmlFor={`description.${lang}`} className="block text-sm font-medium text-gray-700 mb-1">Description ({lang.toUpperCase()})</label>
+                                <Controller name={`description.${lang}`} control={control} render={({ field }) => ( <JoditEditor value={field.value || ''} config={config(lang)} onBlur={newContent => field.onChange(newContent)} /> )} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
           </div>
         </section>
         <div className='my-12'><div style={{ height: 0, width: '100%', borderTop: '1px dashed #cccccc', margin: '0' }} /></div>
-        {/* SECTION 2: Images */}
         <section id="sec2" className='flex flex-col lg:flex-row gap-4 lg:gap-8 '>
           <div className='w-full lg:w-[30%] lg:shrink-0 flex flex-col mb-4 lg:mb-0'>
             <p className='font-medium text-fblack text-[16px]'>Images*</p> <p className='text-sm font mt-1 text-gray-500'>Gérez la galerie d'images.</p>
@@ -185,7 +216,6 @@ export default function ProductEdit() {
           </div>
         </section>
         <div className='my-12'><div style={{ height: 0, width: '100%', borderTop: '1px dashed #cccccc', margin: '0' }} /></div>
-        {/* SECTION 3: Catégories */}
         <section id="sec3" className='flex flex-col lg:flex-row gap-4 lg:gap-8 '>
           <div className='w-full lg:w-[30%] lg:shrink-0 flex flex-col mb-4 lg:mb-0'>
             <p className='font-medium text-fblack text-[16px]'>Catégories*</p> <p className='text-sm font mt-1 text-gray-500'>Sélectionnez les catégories.</p>
@@ -200,7 +230,6 @@ export default function ProductEdit() {
           </div>
         </section>
         <div className='my-12'><div style={{ height: 0, width: '100%', borderTop: '1px dashed #cccccc', margin: '0' }} /></div>
-        {/* SECTION 5: Variantes */}
         <section id="sec5" className='flex flex-col lg:flex-row gap-4 lg:gap-8 '>
            <div className='w-full lg:w-[30%] lg:shrink-0 flex flex-col mb-4 lg:mb-0'>
             <p className='font-medium text-fblack text-[16px]'>Variantes</p> <p className='text-sm font mt-1 text-gray-500'>Les variantes existantes sont affichées. La modification des variantes sera bientôt disponible.</p>

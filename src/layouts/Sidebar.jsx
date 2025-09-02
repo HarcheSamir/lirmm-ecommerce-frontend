@@ -1,3 +1,4 @@
+//src/layouts/Sidebar.jsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -11,7 +12,9 @@ import {
   PiCaretDown,
   PiChartBarDuotone,
   PiStackDuotone,
-  PiArrowUDownLeftDuotone // <-- SURGICAL ADDITION: New Icon
+  PiArrowUDownLeftDuotone,
+  PiGear,
+  PiCurrencyCircleDollar // <-- SURGICAL ADDITION: New Icon
 } from 'react-icons/pi';
 import { FaDotCircle } from "react-icons/fa";
 import useLayoutStore from '../store/layoutStore';
@@ -73,6 +76,12 @@ const navigationItems = [
       { name: 'Rôles et Permissions', path: '/dashboard/accounts', permission: 'read:role' },
       { name: 'Créer', path: '/dashboard/accounts/create', permission: 'write:user' },
     ],
+  },
+  {
+    name: 'Taux de Change',
+    icon: PiCurrencyCircleDollar,
+    path: '/dashboard/currencies',
+    permission: 'write:currency',
   },
   {
     name: 'Centre d\'aide',

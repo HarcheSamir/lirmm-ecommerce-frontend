@@ -18,6 +18,7 @@ import Stock from '../pages/Products/Stock';
 import StockHistory from '../pages/Products/StockHistory';
 import ReviewsList from '../pages/Products/ReviewsList'
 import Statistics from '../pages/Statistics'
+import CurrencyPage from '../pages/CurrencyPage';
 // --- START: SURGICAL ADDITION ---
 import ReturnList from '../pages/Returns/ReturnList';
 import ReturnDetail from '../pages/Returns/ReturnDetail';
@@ -55,6 +56,8 @@ export default function DashboardNavigator() {
         {/* Account & Role Routes */}
         <Route path="/accounts" element={<WithPermission requiredPermission="read:user"><AccountList /></WithPermission>} />
         <Route path="/accounts/create" element={<WithPermission requiredPermission="write:user"><AccountCreate /></WithPermission>} />
+
+        <Route path="/currencies" element={<CurrencyPage />} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
