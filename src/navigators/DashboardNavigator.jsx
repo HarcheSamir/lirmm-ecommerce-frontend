@@ -1,27 +1,30 @@
-import React from 'react'
+import React from 'react';
 import { Route, Routes } from "react-router-dom";
 
 import WithPermission from '../hocs/WithPermission';
 
 import NotFoundPage from '../pages/NotFoundPage';
-import ProductList from '../pages/Products/ProductList'
-import ProductCreate from '../pages/Products/ProductCreate'
+import ProductList from '../pages/Products/ProductList';
+import ProductCreate from '../pages/Products/ProductCreate';
 import ProductEdit from '../pages/Products/ProductEdit';
-import OrderList from '../pages/Orders/OrderList'
-import OrderCreate from '../pages/Orders/OrderCreate'
+import OrderList from '../pages/Orders/OrderList';
+import OrderCreate from '../pages/Orders/OrderCreate';
 import OrderDetail from '../pages/Orders/OrderDetail';
-import AccountList from '../pages/Accounts/AccountList'
-import AccountCreate from '../pages/Accounts/AccountCreate'
+import AccountList from '../pages/Accounts/AccountList';
+import AccountCreate from '../pages/Accounts/AccountCreate';
 import CategoryCreate from '../pages/Categories/CategoryCreate';
 import CategoryList from '../pages/Categories/CategoryList';
 import Stock from '../pages/Products/Stock';
 import StockHistory from '../pages/Products/StockHistory';
-import ReviewsList from '../pages/Products/ReviewsList'
-import Statistics from '../pages/Statistics'
+import ReviewsList from '../pages/Products/ReviewsList';
+import Statistics from '../pages/Statistics';
 import CurrencyPage from '../pages/CurrencyPage';
-// --- START: SURGICAL ADDITION ---
 import ReturnList from '../pages/Returns/ReturnList';
 import ReturnDetail from '../pages/Returns/ReturnDetail';
+// --- START: SURGICAL ADDITION ---
+import PromotionList from '../pages/Promotions/PromotionList';
+import PromotionCreate from '../pages/Promotions/PromotionCreate';
+import PromotionEdit from '../pages/Promotions/PromotionEdit';
 // --- END: SURGICAL ADDITION ---
 
 export default function DashboardNavigator() {
@@ -43,10 +46,15 @@ export default function DashboardNavigator() {
         <Route path="/orders/create" element={<WithPermission requiredPermission="create:order"><OrderCreate /></WithPermission>} />
         <Route path="/orders/:id" element={<WithPermission requiredPermission="read:order"><OrderDetail /></WithPermission>} />
 
-        {/* --- START: SURGICAL ADDITION --- */}
         {/* Return Routes */}
         <Route path="/returns" element={<WithPermission requiredPermission="read:returns"><ReturnList /></WithPermission>} />
         <Route path="/returns/:id" element={<WithPermission requiredPermission="read:returns"><ReturnDetail /></WithPermission>} />
+
+        {/* --- START: SURGICAL ADDITION --- */}
+        {/* Promotion Routes */}
+        <Route path="/promotions" element={<WithPermission requiredPermission="read:promotion"><PromotionList /></WithPermission>} />
+        <Route path="/promotions/create" element={<WithPermission requiredPermission="write:promotion"><PromotionCreate /></WithPermission>} />
+        <Route path="/promotions/edit/:id" element={<WithPermission requiredPermission="write:promotion"><PromotionEdit /></WithPermission>} />
         {/* --- END: SURGICAL ADDITION --- */}
 
         {/* Category Routes */}

@@ -27,6 +27,17 @@ export const useProductStore = create((set, get) => ({
   products: [],
   product: null,
   stockHistory: [],
+  // --- START: SURGICAL ADDITION ---
+  promotions: [],
+  promotion: null,
+  isPromotionLoading: false,
+  promotionPagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  },
+  // --- END: SURGICAL ADDITION ---
   isLoading: false,
   isUploading: false,
   error: null,
@@ -236,4 +247,133 @@ export const useProductStore = create((set, get) => ({
       return false;
     }
   },
+
+  // --- START: SURGICAL ADDITION ---
+  fetchPromotions: async () => {
+    try {
+      set({ isPromotionLoading: true, error: null });
+      const response = await api.get('/products/promotions/all');
+      set({
+        promotions: response.data,
+        isPromotionLoading: false,
+      });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch promotions';
+      set({ error: message, isPromotionLoading: false });
+      toast.error(message);
+    }
+  },
+
+  fetchPromotionById: async (id) => {
+    try {
+      set({ isPromotionLoading: true, error: null, promotion: null });
+      const response = await api.get(`/products/promotions/${id}`);
+      set({ promotion: response.data, isPromotionLoading: false });
+      return response.data;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch promotion';
+      set({ error: message, isPromotionLoading: false });
+      toast.error(message);
+      return null;
+    }
+  },
+
+  createPromotion: async (promotionData) => {
+    const { imageFile, productImageFile, ...coreData } = promotionData;
+    set({ isPromotionLoading: true, isUploading: true, error: null });
+    try {
+      let imageUrl = null;
+      let productImageUrl = null;
+
+      if (imageFile) {
+        const result = await uploadImage(imageFile);
+        imageUrl = result.url;
+      }
+      if (productImageFile) {
+        const result = await uploadImage(productImageFile);
+        productImageUrl = result.url;
+      }
+
+      const payload = { ...coreData, imageUrl, productImageUrl };
+      
+      await api.post('/products/promotions', payload);
+      toast.success('Promotion créée avec succès !');
+      get().fetchPromotions();
+      set({ isPromotionLoading: false, isUploading: false });
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Échec de la création de la promotion';
+      set({ error: message, isPromotionLoading: false, isUploading: false });
+      toast.error(`Erreur: ${message}`);
+      return false;
+    }
+  },
+
+  updatePromotion: async (id, promotionData) => {
+    const { imageFile, productImageFile, ...coreData } = promotionData;
+    set({ isPromotionLoading: true, isUploading: true, error: null });
+    try {
+      let imageUrl = coreData.imageUrl;
+      let productImageUrl = coreData.productImageUrl;
+
+      if (imageFile) {
+        const result = await uploadImage(imageFile);
+        imageUrl = result.url;
+      }
+      if (productImageFile) {
+        const result = await uploadImage(productImageFile);
+        productImageUrl = result.url;
+      }
+      
+      const payload = { ...coreData, imageUrl, productImageUrl };
+
+      await api.put(`/products/promotions/${id}`, payload);
+      toast.success('Promotion mise à jour avec succès !');
+      get().fetchPromotions();
+      set({ isPromotionLoading: false, isUploading: false });
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Échec de la mise à jour de la promotion';
+      set({ error: message, isPromotionLoading: false, isUploading: false });
+      toast.error(`Erreur: ${message}`);
+      return false;
+    }
+  },
+
+  deletePromotion: async (id) => {
+    try {
+      set({ isPromotionLoading: true, error: null });
+      await api.delete(`/products/promotions/${id}`);
+      toast.success('Promotion supprimée avec succès !');
+      set(state => ({
+        promotions: state.promotions.filter(p => p.id !== id),
+        isPromotionLoading: false,
+      }));
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to delete promotion';
+      set({ error: message, isPromotionLoading: false });
+      toast.error(message);
+    }
+  },
+  // --- END: SURGICAL ADDITION ---
+
+    // --- START: SURGICAL ADDITION ---
+    reorderPromotions: async (orderedIds) => {
+      const originalPromotions = get().promotions;
+      // Optimistic UI update
+      const reorderedPromotions = orderedIds.map(id => originalPromotions.find(p => p.id === id)).filter(Boolean);
+      set({ promotions: reorderedPromotions });
+  
+      try {
+        await api.put('/products/promotions/reorder', { orderedIds });
+        toast.success('Ordre des promotions mis à jour !');
+        // No need to refetch, the optimistic update is correct
+      } catch (error) {
+        // Revert on error
+        set({ promotions: originalPromotions });
+        const message = error.response?.data?.message || 'Failed to reorder promotions';
+        toast.error(message);
+      }
+    },
+    // --- END: SURGICAL ADDITION ---
 }));

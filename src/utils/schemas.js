@@ -1,3 +1,5 @@
+//src/utils/schemas.js
+
 import { z } from 'zod';
 
 // --- Language-specific Schemas ---
@@ -139,4 +141,25 @@ export const currencySchema = z.object({
     z.number({ required_error: 'Rate is required', invalid_type_error: 'Rate must be a number' })
       .positive({ message: 'Rate must be a positive number' })
   ),
+});
+
+export const promotionSchema = z.object({
+  title: multiLangSchema('titre'),
+  subtitle: multiLangSchemaOptional(),
+  tagline: multiLangSchemaOptional(),
+  ctaText: multiLangSchema('texte du bouton'),
+  ctaLink: z.string().min(1, { message: "Le lien du bouton est requis" }).url({ message: "Veuillez entrer une URL valide" }),
+  displayOrder: z.preprocess(
+    (val) => parseInt(String(val), 10),
+    z.number({ invalid_type_error: "L'ordre d'affichage doit être un nombre" }).int().default(0)
+  ),
+  isActive: z.boolean().default(false),
+  // --- START: SURGICAL CORRECTION ---
+  expiresAt: z.preprocess((val) => {
+    if (!val) return undefined; // Handles empty string or null from the form
+    const date = new Date(val);
+    // Handles 'Invalid Date' object from react-hook-form's valueAsDate
+    return date instanceof Date && !isNaN(date) ? date : undefined;
+  }, z.date().optional().nullable()),
+  // --- END: SURGICAL CORRECTION ---
 });

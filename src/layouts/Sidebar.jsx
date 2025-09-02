@@ -14,7 +14,8 @@ import {
   PiStackDuotone,
   PiArrowUDownLeftDuotone,
   PiGear,
-  PiCurrencyCircleDollar // <-- SURGICAL ADDITION: New Icon
+  PiCurrencyCircleDollar, // <-- SURGICAL ADDITION: New Icon
+  PiMegaphoneSimpleDuotone
 } from 'react-icons/pi';
 import { FaDotCircle } from "react-icons/fa";
 import useLayoutStore from '../store/layoutStore';
@@ -65,6 +66,17 @@ const navigationItems = [
     icon: PiArrowUDownLeftDuotone,
     path: '/dashboard/returns',
     permission: 'read:returns',
+  },
+  {
+    name: 'Promotions',
+    icon: PiMegaphoneSimpleDuotone,
+    basePath: '/dashboard/promotions',
+    permission: 'read:promotion',
+    children: [
+        { name: 'Liste', path: '/dashboard/promotions', permission: 'read:promotion' },
+        { name: 'Créer', path: '/dashboard/promotions/create', permission: 'write:promotion' },
+        { name: 'Modifier', path: '/dashboard/promotions/edit', hidden: true, permission: 'write:promotion' },
+    ]
   },
   // --- END: SURGICAL ADDITION ---
   {
