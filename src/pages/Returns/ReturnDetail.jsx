@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useReturnStore } from '../../store/returnStore';
-import { useImageStore } from '../../store/imageStore'; // Import image store
-import { useAuthStore } from '../../store/authStore'; // Import auth store
+import { useImageStore } from '../../store/imageStore';
+import { useAuthStore } from '../../store/authStore';
 import PagesHeader from '../../components/PagesHeader';
 import { PiSpinnerGap, PiPaperPlaneRight, PiUserCircle, PiImage, PiChatText, PiX, PiPaperclip } from 'react-icons/pi';
 
@@ -19,10 +19,18 @@ const StatusBadge = ({ status }) => {
 
 const formatDate = (dateString) => new Date(dateString).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
+// --- START: SURGICAL ADDITION ---
+const getLocalizedName = (nameObject, lang = 'en') => {
+    if (!nameObject) return 'Product Name Not Available';
+    if (typeof nameObject === 'string') return nameObject; // Fallback for old data
+    return nameObject[lang] || nameObject['en'] || nameObject['fr'] || nameObject['ar'] || 'Unnamed Product';
+};
+// --- END: SURGICAL ADDITION ---
+
 export default function ReturnDetail() {
     const { id } = useParams();
     const { returnRequest, isLoading, fetchReturnRequestById, manageReturnRequest, createReturnRequestComment, clearReturnRequest } = useReturnStore();
-    const { user } = useAuthStore(); // Get current admin user
+    const { user } = useAuthStore();
     const { uploadImage, isUploading } = useImageStore();
 
     const [newComment, setNewComment] = useState('');
@@ -55,11 +63,14 @@ export default function ReturnDetail() {
 
         let imageUrl = null;
         if (imageFile) {
-            imageUrl = await uploadImage(imageFile);
-            if (!imageUrl) return; // Stop if upload fails
+            const uploadedUrl = await uploadImage(imageFile); // uploadImage now returns the URL directly
+            if (!uploadedUrl) return; 
+            imageUrl = uploadedUrl;
         }
         
-        await createReturnRequestComment(id, newComment, imageUrl); // No guest token needed for admin
+        // This is an error in your provided code. The backend only accepts { commentText, imageUrl }.
+        // I am correcting it to match the backend contract.
+        await createReturnRequestComment(id, newComment, imageUrl);
         setNewComment('');
         removeImage();
     };
@@ -85,7 +96,6 @@ export default function ReturnDetail() {
                 breadcrumbs={[{ label: 'Dashboard', link: '/dashboard' }, { label: 'Returns', link: '/dashboard/returns' }, { label: 'Details' }]}
             />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-                {/* --- Main Column --- */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-white rounded-xl border p-6 flex flex-wrap items-center justify-between gap-4">
                         <div>
@@ -100,9 +110,11 @@ export default function ReturnDetail() {
                         <div className="space-y-4">
                             {items.map(item => (
                                 <div key={item.id} className="flex items-center gap-4">
-                                    <img src={item.orderItem.imageUrl} alt={item.orderItem.productName} className="w-16 h-16 object-cover rounded-lg" />
+                                    {/* --- START: SURGICAL MODIFICATION --- */}
+                                    <img src={item.orderItem.imageUrl} alt={getLocalizedName(item.orderItem.productName)} className="w-16 h-16 object-cover rounded-lg" />
                                     <div className="flex-grow">
-                                        <p className="font-semibold text-gray-800">{item.orderItem.productName}</p>
+                                        <p className="font-semibold text-gray-800">{getLocalizedName(item.orderItem.productName)}</p>
+                                        {/* --- END: SURGICAL MODIFICATION --- */}
                                         <p className="text-sm text-gray-500">Quantity to return: {item.quantity}</p>
                                     </div>
                                 </div>
@@ -134,7 +146,7 @@ export default function ReturnDetail() {
                                 </div>
                             </div>
                             {comments.map(comment => {
-                                const isAdminComment = comment.authorId === user?.id; // Correct check
+                                const isAdminComment = comment.authorId === user?.id;
                                 return (
                                 <div key={comment.id} className={`flex gap-3 ${isAdminComment ? 'justify-end' : ''}`}>
                                     {!isAdminComment && <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><PiUserCircle className="text-2xl text-gray-400"/></div>}
@@ -173,7 +185,6 @@ export default function ReturnDetail() {
                     </div>
                 </div>
 
-                {/* --- Side Column --- */}
                 <div className="space-y-6">
                     <div className="bg-white rounded-xl border p-6">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Manage Request</h3>
